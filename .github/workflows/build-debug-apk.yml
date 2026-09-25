@@ -28,7 +28,9 @@ jobs:
           java-version: 17
 
       - name: Générer le projet Android natif
-        run: npx expo prebuild --platform android --non-interactive
+        run: npx expo prebuild --platform android
+        env:
+          CI: 1
 
       - name: Builder l'APK debug
         working-directory: android
