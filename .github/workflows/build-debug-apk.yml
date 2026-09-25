@@ -34,6 +34,15 @@ jobs:
         env:
           CI: 1
 
+      - name: Éliminer les doublons de expo-modules-core / expo-modules-autolinking
+        run: |
+          CORE_VER=$(node -e "console.log(require('./node_modules/expo/package.json').dependencies['expo-modules-core'])")
+          AUTOLINK_VER=$(node -e "console.log(require('./node_modules/expo/package.json').dependencies['expo-modules-autolinking'])")
+          echo "expo attend expo-modules-core@$CORE_VER et expo-modules-autolinking@$AUTOLINK_VER"
+          npm pkg set "overrides.expo-modules-core=$CORE_VER"
+          npm pkg set "overrides.expo-modules-autolinking=$AUTOLINK_VER"
+          npm install
+
       - name: Figer les versions pour tous les prochains builds
         run: |
           git config user.name "github-actions[bot]"
