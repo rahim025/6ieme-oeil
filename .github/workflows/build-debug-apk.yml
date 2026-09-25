@@ -32,7 +32,7 @@ jobs:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
         run: |
           if ! grep -q '"projectId"' app.json 2>/dev/null; then
-            eas init --non-interactive
+            eas init --non-interactive --force
           else
             echo "Projet EAS déjà initialisé."
           fi
