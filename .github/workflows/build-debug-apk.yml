@@ -22,7 +22,12 @@ jobs:
           node-version: 20
 
       - name: Installer les dépendances
-        run: npm install
+        run: |
+          for i in 1 2 3; do
+            npm install --no-audit --no-fund && break
+            echo "Échec de npm install (tentative $i/3), nouvelle tentative dans 10s..."
+            sleep 10
+          done
 
       - name: Installer eas-cli
         run: npm install -g eas-cli
