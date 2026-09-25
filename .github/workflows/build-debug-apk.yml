@@ -21,6 +21,11 @@ jobs:
       - name: Installer les dépendances
         run: npm install
 
+      - name: Aligner les versions Expo (évite les modules désynchronisés)
+        run: npx expo install --fix
+        env:
+          CI: 1
+
       - name: Installer Java (requis pour Gradle)
         uses: actions/setup-java@v4
         with:
@@ -28,9 +33,12 @@ jobs:
           java-version: 17
 
       - name: Générer le projet Android natif
-        run: npx expo prebuild --platform android
+        run: npx expo prebuild --platform android --clean
         env:
           CI: 1
+
+      - name: Corriger un bug de compat AGP/expo-modules-core
+        run: echo "android.disableAutomaticComponentCreation=true" >> android/gradle.properties
 
       - name: Builder l'APK debug
         working-directory: android
