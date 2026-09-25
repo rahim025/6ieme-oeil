@@ -37,9 +37,6 @@ jobs:
         env:
           CI: 1
 
-      - name: Corriger un bug de compat AGP/expo-modules-core
-        run: echo "android.disableAutomaticComponentCreation=true" >> android/gradle.properties
-
       - name: Builder l'APK debug
         working-directory: android
         run: ./gradlew assembleDebug
