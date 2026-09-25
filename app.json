@@ -5,7 +5,9 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
-    "assetBundlePatterns": ["**/*"],
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "android": {
       "package": "com.rahim025.sixiemeoeil",
       "versionCode": 1
@@ -13,6 +15,12 @@
     "ios": {
       "bundleIdentifier": "com.rahim025.sixiemeoeil",
       "supportsTablet": true
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "fdf7898c-3238-4861-89a8-1656d6258c55"
+      }
+    },
+    "owner": "rahim025s-team"
   }
 }
