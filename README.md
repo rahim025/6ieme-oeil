@@ -11,7 +11,7 @@ multi-onglets, historique, favoris, navigation privée et téléchargements.
 - Multi-onglets avec vue en grille
 - Mode navigation privée par onglet
 - Historique de navigation (consultable et effaçable)
-- Favoris
+- Favoris 
 - Téléchargement de fichiers vers l'appareil (avec partage/enregistrement)
 - Choix du moteur de recherche (Google, DuckDuckGo, Bing)
 
