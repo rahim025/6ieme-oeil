@@ -21,6 +21,9 @@
         "projectId": "fdf7898c-3238-4861-89a8-1656d6258c55"
       }
     },
-    "owner": "rahim025s-team"
+    "owner": "rahim025s-team",
+    "plugins": [
+      "./plugins/withGradleVersion.js"
+    ]
   }
 }
