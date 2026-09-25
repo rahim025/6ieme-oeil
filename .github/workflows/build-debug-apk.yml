@@ -29,6 +29,9 @@ jobs:
             sleep 10
           done
 
+      - name: Corriger les versions des modules Expo (compatibilité SDK)
+        run: npx expo install --fix
+
       - name: Installer eas-cli
         run: npm install -g eas-cli
 
