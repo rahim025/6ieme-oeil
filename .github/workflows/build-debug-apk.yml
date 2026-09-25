@@ -1,4 +1,4 @@
-name: Build Debug APK
+name: Build Debug APK (EAS)
 
 # Se lance à chaque push sur main, ou manuellement depuis l'onglet Actions
 on:
@@ -21,57 +21,47 @@ jobs:
         with:
           node-version: 20
 
-      - name: Installer les dépendances (mode strict si les versions sont déjà figées)
+      - name: Installer les dépendances
+        run: npm install
+
+      - name: Installer eas-cli
+        run: npm install -g eas-cli
+
+      - name: Initialiser le projet EAS (uniquement au premier run)
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
         run: |
-          if [ -f package-lock.json ]; then
-            npm ci
+          if ! grep -q '"projectId"' app.json 2>/dev/null; then
+            eas init --non-interactive
           else
-            npm install
+            echo "Projet EAS déjà initialisé."
           fi
 
-      - name: Aligner les versions Expo (évite les modules désynchronisés)
-        run: npx expo install --fix
-        env:
-          CI: 1
-
-      - name: Éliminer les doublons de expo-modules-core / expo-modules-autolinking
-        run: |
-          CORE_VER=$(node -e "console.log(require('./node_modules/expo/package.json').dependencies['expo-modules-core'])")
-          AUTOLINK_VER=$(node -e "console.log(require('./node_modules/expo/package.json').dependencies['expo-modules-autolinking'])")
-          echo "expo attend expo-modules-core@$CORE_VER et expo-modules-autolinking@$AUTOLINK_VER"
-          npm pkg set "overrides.expo-modules-core=$CORE_VER"
-          npm pkg set "overrides.expo-modules-autolinking=$AUTOLINK_VER"
-          npm install
-
-      - name: Figer les versions pour tous les prochains builds
+      - name: Sauvegarder l'id de projet EAS s'il vient d'être créé
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          if ! git diff --quiet -- package.json package-lock.json; then
-            git add package.json package-lock.json
-            git commit -m "chore: figer les versions des dépendances (build reproductible)"
+          if ! git diff --quiet -- app.json; then
+            git add app.json
+            git commit -m "chore: ajouter l'id du projet EAS"
             git push
           else
-            echo "Versions déjà figées, rien à committer."
+            echo "Rien à committer."
           fi
 
-      - name: Installer Java (requis pour Gradle)
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: 17
-
-      - name: Générer le projet Android natif
-        run: npx expo prebuild --platform android --clean
+      - name: Lancer le build Android sur EAS et attendre le résultat
         env:
-          CI: 1
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: eas build --platform android --profile preview --non-interactive --wait --json > eas-build-result.json
 
-      - name: Builder l'APK debug
-        working-directory: android
-        run: ./gradlew assembleDebug
+      - name: Télécharger l'APK généré
+        run: |
+          URL=$(node -e "const r=JSON.parse(require('fs').readFileSync('eas-build-result.json','utf8')); const b=Array.isArray(r)?r[0]:r; console.log(b.artifacts.buildUrl)")
+          echo "Téléchargement depuis $URL"
+          curl -L "$URL" -o app-debug.apk
 
       - name: Publier l'APK comme artifact téléchargeable
         uses: actions/upload-artifact@v4
         with:
           name: 6ieme-oeil-debug-apk
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          path: app-debug.apk
