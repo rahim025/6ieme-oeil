@@ -6,6 +6,9 @@ on:
     branches: [main]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -18,13 +21,30 @@ jobs:
         with:
           node-version: 20
 
-      - name: Installer les dépendances
-        run: npm install
+      - name: Installer les dépendances (mode strict si les versions sont déjà figées)
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci
+          else
+            npm install
+          fi
 
       - name: Aligner les versions Expo (évite les modules désynchronisés)
         run: npx expo install --fix
         env:
           CI: 1
+
+      - name: Figer les versions pour tous les prochains builds
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          if ! git diff --quiet -- package.json package-lock.json; then
+            git add package.json package-lock.json
+            git commit -m "chore: figer les versions des dépendances (build reproductible)"
+            git push
+          else
+            echo "Versions déjà figées, rien à committer."
+          fi
 
       - name: Installer Java (requis pour Gradle)
         uses: actions/setup-java@v4
