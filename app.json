@@ -1,0 +1,18 @@
+{
+  "expo": {
+    "name": "6ième Œil",
+    "slug": "sixieme-oeil",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "assetBundlePatterns": ["**/*"],
+    "android": {
+      "package": "com.rahim025.sixiemeoeil",
+      "versionCode": 1
+    },
+    "ios": {
+      "bundleIdentifier": "com.rahim025.sixiemeoeil",
+      "supportsTablet": true
+    }
+  }
+}
