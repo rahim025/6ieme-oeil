@@ -63,6 +63,9 @@ export default function AddressBar({
           placeholderTextColor={COLORS.textMuted}
           autoCapitalize="none"
           autoCorrect={false}
+          autoComplete="off"
+          importantForAutofill="no"
+          textContentType="none"
           keyboardType="web-search"
           returnKeyType="go"
           selectTextOnFocus
