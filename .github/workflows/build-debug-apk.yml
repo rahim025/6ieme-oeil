@@ -1,3 +1,79 @@
+name: Build Debug APK (EAS)
+
+# Se lance à chaque push sur main, ou manuellement depuis l'onglet Actions
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Récupérer le code
+        uses: actions/checkout@v4
+
+      - name: Installer Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Installer les dépendances
+        run: |
+          for i in 1 2 3; do
+            npm install --no-audit --no-fund && break
+            echo "Échec de npm install (tentative $i/3), nouvelle tentative dans 10s..."
+            sleep 10
+          done
+
+      - name: Corriger les versions des modules Expo (compatibilité SDK)
+        run: npx expo install --fix
+
+      - name: Installer eas-cli
+        run: npm install -g eas-cli
+
+      - name: Initialiser le projet EAS (uniquement au premier run)
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          if ! grep -q '"projectId"' app.json 2>/dev/null; then
+            eas init --non-interactive --force
+          else
+            echo "Projet EAS déjà initialisé."
+          fi
+
+      - name: Sauvegarder l'id de projet EAS s'il vient d'être créé
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          if ! git diff --quiet -- app.json; then
+            git add app.json
+            git commit -m "chore: ajouter l'id du projet EAS"
+            git push
+          else
+            echo "Rien à committer."
+          fi
+
+      - name: Lancer le build Android sur EAS et attendre le résultat
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: eas build --platform android --profile preview --non-interactive --wait --json > eas-build-result.json
+
+      - name: Télécharger l'APK généré
+        run: |
+          URL=$(node -e "const r=JSON.parse(require('fs').readFileSync('eas-build-result.json','utf8')); const b=Array.isArray(r)?r[0]:r; console.log(b.artifacts.buildUrl)")
+          echo "Téléchargement depuis $URL"
+          curl -L "$URL" -o app-debug.apk
+
+      - name: Publier l'APK comme artifact téléchargeable
+        uses: actions/upload-artifact@v4
+        with:
+          name: 6ieme-oeil-debug-apk
+          path: app-debug.apk
+
       - name: Afficher les logs d'erreur EAS
         if: failure()
         env:
@@ -7,13 +83,4 @@
           cat > show-logs.js <<'EOF'
           const fs = require('fs');
           const { execSync } = require('child_process');
-          const r = JSON.parse(fs.readFileSync('last-build.json', 'utf8'));
-          const b = Array.isArray(r) ? r[0] : r;
-          console.log('Statut:', b.status);
-          if (b.error) console.log('Erreur EAS:', JSON.stringify(b.error));
-          for (const url of b.logFiles || []) {
-            const txt = execSync(`curl -sL "${url}"`, { maxBuffer: 1e8 }).toString().trim().split('\n').slice(-80);
-            txt.forEach((l) => { try { console.log(JSON.parse(l).msg); } catch (e) { console.log(l); } });
-          }
-          EOF
-          node show-logs.js
+          const r = JSON.parse(fs.readFileSync('last-build.json', 'ut
