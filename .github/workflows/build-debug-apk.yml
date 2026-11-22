@@ -80,7 +80,4 @@ jobs:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
         run: |
           eas build:list --platform android --limit 1 --non-interactive --json > last-build.json || true
-          cat > show-logs.js <<'EOF'
-          const fs = require('fs');
-          const { execSync } = require('child_process');
-          const r = JSON.parse(fs.readFileSync('last-build.json', 'ut
+          node -e "const fs=require('fs'),cp=require('child_process');const r=JSON.parse(fs.readFileSync('last-build.json','utf8'));const b=Array.isArray(r)?r[0]:r;console.log('Statut:',b.status);if(b.error)console.log('Erreur EAS:',JSON.stringify(b.error));for(const u of b.logFiles||[]){cp.execFileSync('curl',['-sL',u],{maxBuffer:1e8}).toString().trim().split(String.fromCharCode(10)).slice(-80).forEach(l=>{try{console.log(JSON.parse(l).msg)}catch(e){console.log(l)}})}"
