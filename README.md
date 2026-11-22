@@ -77,3 +77,19 @@ si tu repars d'un projet neuf.
 - Blocage de publicités/trackers (injection JS ou liste de filtres)
 - Synchronisation des favoris entre appareils
 - Mode lecture (extraction de contenu simplifié)
+
+## Publicités (AdMob)
+
+L'appli utilise `react-native-google-mobile-ads` : une bannière au-dessus de la
+barre d'outils et une pub plein écran (interstitiel) rare, toutes les 6 pages
+et au plus toutes les 3 minutes.
+
+Pour l'instant ce sont des **pubs de test** (`USE_TEST_ADS = true` dans
+`src/ads/adConfig.js`). Pour passer aux vraies pubs, après approbation AdMob :
+
+1. Dans AdMob, crée un bloc « Bannière » et un bloc « Interstitiel ».
+2. Colle leurs ID dans `REAL_UNITS` (`src/ads/adConfig.js`) et mets `USE_TEST_ADS = false`.
+3. Dans `app.json`, remplace `androidAppId` par l'ID d'application AdMob (avec `~`).
+4. Relance un build : les pubs ne fonctionnent pas dans Expo Go, il faut l'APK.
+
+Ne clique jamais sur tes propres pubs avec les vrais ID.

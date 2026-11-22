@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import mobileAds from 'react-native-google-mobile-ads';
 
 import { BrowserProvider } from './src/context/BrowserContext';
 import BrowserScreen from './src/screens/BrowserScreen';
@@ -14,6 +15,12 @@ import SettingsScreen from './src/screens/SettingsScreen';
 const Stack = createNativeStackNavigator();
 
 export default function App() {
+  useEffect(() => {
+    mobileAds()
+      .initialize()
+      .catch(() => {});
+  }, []);
+
   return (
     <SafeAreaProvider>
       <BrowserProvider>

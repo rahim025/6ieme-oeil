@@ -9,11 +9,17 @@
       "**/*"
     ],
     "splash": {
-      "backgroundColor": "#ffffff"
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#F3F4F2"
     },
     "android": {
       "package": "com.rahim025.sixiemeoeil",
-      "versionCode": 1
+      "versionCode": 1,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#059669"
+      }
     },
     "ios": {
       "bundleIdentifier": "com.rahim025.sixiemeoeil",
@@ -24,6 +30,16 @@
         "projectId": "fdf7898c-3238-4861-89a8-1656d6258c55"
       }
     },
-    "owner": "rahim025s-team"
+    "owner": "rahim025s-team",
+    "icon": "./assets/icon.png",
+    "plugins": [
+      [
+        "react-native-google-mobile-ads",
+        {
+          "androidAppId": "ca-app-pub-3940256099942544~3347511713",
+          "iosAppId": "ca-app-pub-3940256099942544~1458002511"
+        }
+      ]
+    ]
   }
 }
