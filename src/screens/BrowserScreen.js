@@ -1,23 +1,19 @@
-import React, { useRef, useState, useCallback, useMemo } from 'react';
-import {
-  View,
-  StyleSheet,
-  ActivityIndicator,
-  Alert,
-  Text,
-  TouchableOpacity,
-} from 'react-native';
+import React, { useRef, useState, useCallback, useMemo, useEffect } from 'react';
+import { View, StyleSheet, ActivityIndicator, Alert, Text, Share } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 
 import AddressBar from '../components/AddressBar';
 import ToolBar from '../components/ToolBar';
+import MenuSheet from '../components/MenuSheet';
+import StartPage from '../components/StartPage';
+import AdBanner from '../ads/AdBanner';
+import { useInterstitial } from '../ads/useInterstitial';
 import { useBrowser } from '../context/BrowserContext';
-import { resolveInputToUrl } from '../utils/urlUtils';
+import { resolveInputToUrl, isHome, HOME_URL } from '../utils/urlUtils';
 import { downloadFile } from '../utils/downloadHandler';
-
-const COLORS = { bg: '#F3F4F2', emerald: '#059669' };
+import { COLORS } from '../theme';
 
 export default function BrowserScreen() {
   const navigation = useNavigation();
@@ -27,16 +23,32 @@ export default function BrowserScreen() {
     updateTab,
     addToHistory,
     history,
+    bookmarks,
     settings,
     isBookmarked,
     toggleBookmark,
     tabs,
-    HOME_URL,
+    newTab,
   } = useBrowser();
+
+  const { onPageLoaded } = useInterstitial();
 
   const [navState, setNavState] = useState({ canGoBack: false, canGoForward: false });
   const [loading, setLoading] = useState(false);
+  const [progress, setProgress] = useState(0);
   const [downloadPct, setDownloadPct] = useState(null);
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  const isHomePage = isHome(activeTab.url);
+
+  // Sur la page d'accueil, il n'y a pas de WebView : on remet les états à zéro
+  useEffect(() => {
+    if (isHomePage) {
+      setNavState({ canGoBack: false, canGoForward: false });
+      setLoading(false);
+      setProgress(0);
+    }
+  }, [isHomePage, activeTab.id]);
 
   const historySuggestions = useMemo(
     () =>
@@ -50,9 +62,19 @@ export default function BrowserScreen() {
   const goTo = useCallback(
     (input) => {
       const url = resolveInputToUrl(input, settings.searchEngine);
-      updateTab(activeTab.id, { url });
+      updateTab(activeTab.id, { url, title: url });
     },
     [activeTab, settings.searchEngine, updateTab]
+  );
+
+  const openUrl = useCallback(
+    (url) => updateTab(activeTab.id, { url, title: url }),
+    [activeTab, updateTab]
+  );
+
+  const goHome = useCallback(
+    () => updateTab(activeTab.id, { url: HOME_URL, title: 'Accueil' }),
+    [activeTab, updateTab]
   );
 
   const handleNavigationStateChange = useCallback(
@@ -86,6 +108,20 @@ export default function BrowserScreen() {
     }
   }, []);
 
+  const menuItems = [
+    { icon: 'add-circle-outline', label: 'Nouvel onglet', onPress: () => newTab() },
+    { icon: 'eye-off-outline', label: 'Onglet privé', onPress: () => newTab(undefined, true) },
+    {
+      icon: 'share-social-outline',
+      label: 'Partager la page',
+      disabled: isHomePage,
+      onPress: () => Share.share({ message: activeTab.url }).catch(() => {}),
+    },
+    { icon: 'time-outline', label: 'Historique', onPress: () => navigation.navigate('History') },
+    { icon: 'star-outline', label: 'Favoris', onPress: () => navigation.navigate('Bookmarks') },
+    { icon: 'settings-outline', label: 'Paramètres', onPress: () => navigation.navigate('Settings') },
+  ];
+
   const isSecure = activeTab.url?.startsWith('https://');
 
   return (
@@ -107,29 +143,43 @@ export default function BrowserScreen() {
         isSecure={isSecure}
         onSubmit={goTo}
         suggestions={historySuggestions}
+        hideBookmark={isHomePage}
         isBookmarked={isBookmarked(activeTab.url)}
-        onToggleBookmark={() =>
-          toggleBookmark({ url: activeTab.url, title: activeTab.title })
-        }
+        onToggleBookmark={() => toggleBookmark({ url: activeTab.url, title: activeTab.title })}
       />
 
+      <View style={styles.progressTrack}>
+        {loading && !isHomePage && (
+          <View style={[styles.progressFill, { width: `${Math.max(progress, 0.08) * 100}%` }]} />
+        )}
+      </View>
+
       <View style={styles.webviewWrapper}>
-        <WebView
-          ref={webviewRef}
-          source={{ uri: activeTab.url }}
-          onNavigationStateChange={handleNavigationStateChange}
-          onLoadStart={() => setLoading(true)}
-          onLoadEnd={() => setLoading(false)}
-          onFileDownload={handleDownload}
-          startInLoadingState
-          renderLoading={() => (
-            <View style={styles.loadingOverlay}>
-              <ActivityIndicator size="small" color={COLORS.emerald} />
-            </View>
-          )}
-          incognito={activeTab.isPrivate}
-          allowsBackForwardNavigationGestures
-        />
+        {isHomePage ? (
+          <StartPage onSearch={goTo} onOpen={openUrl} bookmarks={bookmarks} />
+        ) : (
+          <WebView
+            key={activeTab.id}
+            ref={webviewRef}
+            source={{ uri: activeTab.url }}
+            onNavigationStateChange={handleNavigationStateChange}
+            onLoadStart={() => setLoading(true)}
+            onLoadProgress={({ nativeEvent }) => setProgress(nativeEvent.progress)}
+            onLoadEnd={() => {
+              setLoading(false);
+              onPageLoaded();
+            }}
+            onFileDownload={handleDownload}
+            startInLoadingState
+            renderLoading={() => (
+              <View style={styles.loadingOverlay}>
+                <ActivityIndicator size="small" color={COLORS.emerald} />
+              </View>
+            )}
+            incognito={activeTab.isPrivate}
+            allowsBackForwardNavigationGestures
+          />
+        )}
 
         {downloadPct !== null && (
           <View style={styles.downloadBanner}>
@@ -140,28 +190,23 @@ export default function BrowserScreen() {
         )}
       </View>
 
+      <AdBanner />
+
       <ToolBar
         canGoBack={navState.canGoBack}
         canGoForward={navState.canGoForward}
         onBack={() => webviewRef.current?.goBack()}
         onForward={() => webviewRef.current?.goForward()}
         onReload={() => webviewRef.current?.reload()}
-        onHome={() => goTo(HOME_URL)}
+        onHome={goHome}
         onOpenTabs={() => navigation.navigate('Tabs')}
         tabCount={tabs.length}
-        onOpenMenu={() => showMenu(navigation)}
+        onOpenMenu={() => setMenuOpen(true)}
       />
+
+      <MenuSheet visible={menuOpen} onClose={() => setMenuOpen(false)} items={menuItems} />
     </SafeAreaView>
   );
-}
-
-function showMenu(navigation) {
-  Alert.alert('Menu', undefined, [
-    { text: 'Historique', onPress: () => navigation.navigate('History') },
-    { text: 'Favoris', onPress: () => navigation.navigate('Bookmarks') },
-    { text: 'Paramètres', onPress: () => navigation.navigate('Settings') },
-    { text: 'Annuler', style: 'cancel' },
-  ]);
 }
 
 const styles = StyleSheet.create({
@@ -173,16 +218,26 @@ const styles = StyleSheet.create({
     paddingTop: 6,
     gap: 8,
   },
-  logo: { fontSize: 18, fontWeight: '800', color: '#1F2937' },
+  logo: { fontSize: 18, fontWeight: '800', color: COLORS.textDark },
   logoAccent: { color: COLORS.emerald },
   privateBadge: {
-    backgroundColor: '#1F2937',
+    backgroundColor: COLORS.textDark,
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 8,
   },
   privateBadgeText: { color: '#fff', fontSize: 11, fontWeight: '600' },
-  webviewWrapper: { flex: 1, margin: 12, borderRadius: 18, overflow: 'hidden' },
+  progressTrack: { height: 3, marginHorizontal: 20, marginTop: 6 },
+  progressFill: { height: 3, borderRadius: 2, backgroundColor: COLORS.emerald },
+  webviewWrapper: {
+    flex: 1,
+    marginHorizontal: 12,
+    marginTop: 6,
+    marginBottom: 8,
+    borderRadius: 18,
+    overflow: 'hidden',
+    backgroundColor: COLORS.bg,
+  },
   loadingOverlay: {
     ...StyleSheet.absoluteFillObject,
     alignItems: 'center',
@@ -194,7 +249,7 @@ const styles = StyleSheet.create({
     bottom: 12,
     left: 12,
     right: 12,
-    backgroundColor: '#059669',
+    backgroundColor: COLORS.emerald,
     borderRadius: 12,
     paddingVertical: 8,
     alignItems: 'center',
