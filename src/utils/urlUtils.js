@@ -1,3 +1,7 @@
+// Adresse interne de la page d'accueil (affichée par l'appli, pas par la WebView)
+export const HOME_URL = 'about:home';
+export const isHome = (url) => url === HOME_URL;
+
 // Moteurs de recherche disponibles
 export const SEARCH_ENGINES = {
   google: {
@@ -57,6 +61,7 @@ export function resolveInputToUrl(input, engineKey = 'google') {
 
 // Extrait un nom de domaine lisible à afficher dans la barre d'adresse
 export function extractDomain(url) {
+  if (isHome(url)) return 'Accueil';
   try {
     const { hostname } = new URL(url);
     return hostname.replace(/^www\./, '');
