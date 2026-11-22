@@ -1,0 +1,7 @@
+node_modules/
+.expo/
+dist/
+*.apk
+*.aab
+eas-build-result.json
+.DS_Store
