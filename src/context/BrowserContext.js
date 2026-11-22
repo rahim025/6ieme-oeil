@@ -1,9 +1,9 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { HOME_URL } from '../utils/urlUtils';
 
 const BrowserContext = createContext(null);
 
-const HOME_URL = 'https://www.google.com';
 const STORAGE_KEYS = {
   history: '6ieme-oeil:history',
   bookmarks: '6ieme-oeil:bookmarks',
@@ -16,7 +16,7 @@ function makeTab(url = HOME_URL) {
   return {
     id: `tab-${Date.now()}-${tabIdCounter}`,
     url,
-    title: 'Nouvel onglet',
+    title: url === HOME_URL ? 'Accueil' : 'Nouvel onglet',
     isPrivate: false,
     createdAt: Date.now(),
   };
