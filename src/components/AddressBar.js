@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, TextInput, TouchableOpacity, StyleSheet, FlatList, Text } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { extractDomain } from '../utils/urlUtils';
+import { extractDomain, isHome } from '../utils/urlUtils';
 
 const COLORS = {
   emerald: '#059669',
@@ -21,6 +21,7 @@ export default function AddressBar({
   suggestions = [],
   isBookmarked,
   onToggleBookmark,
+  hideBookmark,
 }) {
   const [text, setText] = useState('');
   const [editing, setEditing] = useState(false);
@@ -28,7 +29,7 @@ export default function AddressBar({
 
   useEffect(() => {
     if (!editing) {
-      setText(currentUrl ? extractDomain(currentUrl) : '');
+      setText(currentUrl && !isHome(currentUrl) ? extractDomain(currentUrl) : '');
     }
   }, [currentUrl, editing]);
 
@@ -70,7 +71,7 @@ export default function AddressBar({
           returnKeyType="go"
           selectTextOnFocus
         />
-        {loading ? (
+        {loading || hideBookmark ? (
           <View style={styles.icon} />
         ) : (
           <TouchableOpacity onPress={onToggleBookmark} style={styles.icon}>
