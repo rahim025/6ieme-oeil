@@ -1,8 +1,7 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   View,
   Text,
-  TextInput,
   TouchableOpacity,
   ScrollView,
   StyleSheet,
@@ -20,16 +19,7 @@ const SHORTCUTS = [
   { label: 'Gmail', icon: 'mail-outline', url: 'https://mail.google.com', color: '#EA4335' },
 ];
 
-export default function StartPage({ onSearch, onOpen, bookmarks = [] }) {
-  const [text, setText] = useState('');
-
-  const submit = () => {
-    if (text.trim()) {
-      onSearch(text.trim());
-      setText('');
-    }
-  };
-
+export default function StartPage({ onOpen, bookmarks = [] }) {
   return (
     <ScrollView
       style={styles.scroll}
@@ -43,21 +33,6 @@ export default function StartPage({ onSearch, onOpen, bookmarks = [] }) {
         6<Text style={styles.titleAccent}>ième</Text> Œil
       </Text>
       <Text style={styles.subtitle}>Le web, simplement.</Text>
-
-      <View style={styles.searchRow}>
-        <Ionicons name="search" size={18} color={COLORS.textMuted} />
-        <TextInput
-          style={styles.searchInput}
-          value={text}
-          onChangeText={setText}
-          onSubmitEditing={submit}
-          placeholder="Rechercher ou saisir une adresse"
-          placeholderTextColor={COLORS.textMuted}
-          autoCapitalize="none"
-          autoCorrect={false}
-          returnKeyType="go"
-        />
-      </View>
 
       <Text style={styles.sectionTitle}>Accès rapide</Text>
       <View style={styles.grid}>
@@ -109,7 +84,7 @@ export default function StartPage({ onSearch, onOpen, bookmarks = [] }) {
 
 const styles = StyleSheet.create({
   scroll: { flex: 1 },
-  content: { alignItems: 'center', paddingHorizontal: 20, paddingTop: 36, paddingBottom: 24 },
+  content: { alignItems: 'center', paddingHorizontal: 20, paddingTop: 56, paddingBottom: 24 },
   logoCircle: {
     width: 72,
     height: 72,
@@ -121,24 +96,7 @@ const styles = StyleSheet.create({
   },
   title: { fontSize: 30, fontWeight: '800', color: COLORS.textDark },
   titleAccent: { color: COLORS.emerald },
-  subtitle: { fontSize: 14, color: COLORS.textMuted, marginTop: 4, marginBottom: 24 },
-  searchRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    alignSelf: 'stretch',
-    backgroundColor: COLORS.card,
-    borderRadius: 26,
-    paddingHorizontal: 16,
-    height: 52,
-    shadowColor: '#000',
-    shadowOpacity: 0.07,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 3 },
-    elevation: 3,
-    marginBottom: 28,
-  },
-  searchInput: { flex: 1, fontSize: 16, color: COLORS.textDark },
+  subtitle: { fontSize: 14, color: COLORS.textMuted, marginTop: 4, marginBottom: 36 },
   sectionTitle: {
     alignSelf: 'flex-start',
     fontSize: 15,
