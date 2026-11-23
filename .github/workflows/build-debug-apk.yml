@@ -1,13 +1,72 @@
-name: Build Debug APK (Gradle)
+name: Build et mises à jour
 
-# Se lance à chaque push sur main, ou manuellement depuis l'onglet Actions
+# - À CHAQUE push sur main : la mise à jour est envoyée directement dans l'appli (environ 2 minutes).
+# - Un nouvel APK n'est compilé que si tu lances "Run workflow" à la main
+#   ou si le message du commit contient [build].
 on:
   push:
     branches: [main]
   workflow_dispatch:
 
+env:
+  # À augmenter (2, 3...) seulement quand tu changes une partie native :
+  # nouvelle bibliothèque, permissions, ID d'application AdMob, icône...
+  # Il faut alors compiler et réinstaller un nouvel APK.
+  RUNTIME_VERSION: "1"
+
 jobs:
-  build:
+  update:
+    name: Envoyer la mise à jour dans l'appli
+    runs-on: ubuntu-latest
+    steps:
+      - name: Récupérer le code
+        uses: actions/checkout@v4
+
+      - name: Installer Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Installer les dépendances
+        run: |
+          for i in 1 2 3; do
+            npm install --no-audit --no-fund && break
+            echo "Échec de npm install (tentative $i/3), nouvelle tentative dans 10s..."
+            sleep 10
+          done
+
+      - name: Corriger les versions Expo et ajouter expo-updates
+        run: |
+          npx expo install --fix
+          npx expo install expo-updates
+
+      - name: Utiliser une version de la bibliothèque de pubs compatible avec Expo 51
+        run: npm install "react-native-google-mobile-ads@>=14.0.0 <14.8.0" --no-audit --no-fund
+
+      - name: Configurer les mises à jour automatiques
+        run: |
+          node -e "const fs=require('fs');const a=JSON.parse(fs.readFileSync('app.json','utf8'));const e=a.expo;const id=e.extra.eas.projectId;e.runtimeVersion=process.env.RUNTIME_VERSION;e.updates=Object.assign({},e.updates,{url:'https://u.expo.dev/'+id,requestHeaders:{'expo-channel-name':'main'},checkAutomatically:'ON_LOAD',fallbackToCacheTimeout:0});fs.writeFileSync('app.json',JSON.stringify(a,null,2));console.log('Mises à jour configurées, runtimeVersion =',e.runtimeVersion)"
+
+      - name: Installer eas-cli
+        run: npm install -g eas-cli
+
+      - name: Créer le canal de mises à jour (la première fois)
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: eas channel:create main --non-interactive || echo "Le canal existe déjà."
+
+      - name: Publier la mise à jour
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          COMMIT_MSG: ${{ github.event.head_commit.message }}
+        run: |
+          MSG=$(printf '%s' "$COMMIT_MSG" | head -n 1)
+          if [ -z "$MSG" ]; then MSG="Mise à jour manuelle"; fi
+          eas update --channel main --platform android --message "$MSG" --non-interactive
+
+  apk:
+    name: Compiler l'APK
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[build]')
     runs-on: ubuntu-latest
     steps:
       - name: Récupérer le code
@@ -32,14 +91,17 @@ jobs:
             sleep 10
           done
 
-      - name: Corriger les versions des modules Expo (compatibilité SDK)
-        run: npx expo install --fix
+      - name: Corriger les versions Expo et ajouter expo-updates
+        run: |
+          npx expo install --fix
+          npx expo install expo-updates
 
       - name: Utiliser une version de la bibliothèque de pubs compatible avec Expo 51
+        run: npm install "react-native-google-mobile-ads@>=14.0.0 <14.8.0" --no-audit --no-fund
+
+      - name: Configurer les mises à jour automatiques
         run: |
-          npm install "react-native-google-mobile-ads@>=14.0.0 <14.8.0" --no-audit --no-fund
-          echo "Version installée :"
-          node -p "require('react-native-google-mobile-ads/package.json').version"
+          node -e "const fs=require('fs');const a=JSON.parse(fs.readFileSync('app.json','utf8'));const e=a.expo;const id=e.extra.eas.projectId;e.runtimeVersion=process.env.RUNTIME_VERSION;e.updates=Object.assign({},e.updates,{url:'https://u.expo.dev/'+id,requestHeaders:{'expo-channel-name':'main'},checkAutomatically:'ON_LOAD',fallbackToCacheTimeout:0});fs.writeFileSync('app.json',JSON.stringify(a,null,2));console.log('Mises à jour configurées, runtimeVersion =',e.runtimeVersion)"
 
       - name: Générer le projet Android natif
         run: npx expo prebuild --platform android --no-install --clean
@@ -62,7 +124,7 @@ jobs:
           if [ -f gradle.log ]; then
             echo "===== ERREURS DE COMPILATION ====="
             grep -n "^e: " gradle.log | head -30
-            echo "===== RESUME ====="
+            echo "===== RESUME =====" 
             grep -n -A 12 "What went wrong" gradle.log | head -40
             echo "----- fin du log -----"
             tail -40 gradle.log
