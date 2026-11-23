@@ -8,8 +8,8 @@ export const USE_TEST_ADS = true;
 // ID de tes blocs AdMob (format ca-app-pub-XXXX/YYYY).
 // Crée un bloc « Bannière » et un bloc « Interstitiel » dans AdMob.
 const REAL_UNITS = {
-  banner: '',
-  interstitial: '',
+  banner: 'ca-app-pub-5111098925112092/9375091744',
+  interstitial: 'ca-app-pub-5111098925112092/3464289516',
 };
 
 export const BANNER_UNIT_ID =
