@@ -126,16 +126,20 @@ export default function BrowserScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <View style={styles.header}>
-        <Text style={styles.logo}>
-          6<Text style={styles.logoAccent}>ième</Text> Œil
-        </Text>
-        {activeTab.isPrivate && (
-          <View style={styles.privateBadge}>
-            <Text style={styles.privateBadgeText}>Privé</Text>
-          </View>
-        )}
-      </View>
+      {(!isHomePage || activeTab.isPrivate) && (
+        <View style={styles.header}>
+          {!isHomePage && (
+            <Text style={styles.logo}>
+              6<Text style={styles.logoAccent}>ième</Text> Œil
+            </Text>
+          )}
+          {activeTab.isPrivate && (
+            <View style={styles.privateBadge}>
+              <Text style={styles.privateBadgeText}>Privé</Text>
+            </View>
+          )}
+        </View>
+      )}
 
       <AddressBar
         currentUrl={activeTab.url}
@@ -156,7 +160,7 @@ export default function BrowserScreen() {
 
       <View style={styles.webviewWrapper}>
         {isHomePage ? (
-          <StartPage onSearch={goTo} onOpen={openUrl} bookmarks={bookmarks} />
+          <StartPage onOpen={openUrl} bookmarks={bookmarks} />
         ) : (
           <WebView
             key={activeTab.id}
