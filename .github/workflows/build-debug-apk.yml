@@ -1,13 +1,10 @@
-name: Build Debug APK (EAS)
+name: Build Debug APK (Gradle)
 
 # Se lance à chaque push sur main, ou manuellement depuis l'onglet Actions
 on:
   push:
     branches: [main]
   workflow_dispatch:
-
-permissions:
-  contents: write
 
 jobs:
   build:
@@ -21,6 +18,12 @@ jobs:
         with:
           node-version: 22
 
+      - name: Installer Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
       - name: Installer les dépendances
         run: |
           for i in 1 2 3; do
@@ -32,52 +35,26 @@ jobs:
       - name: Corriger les versions des modules Expo (compatibilité SDK)
         run: npx expo install --fix
 
-      - name: Installer eas-cli
-        run: npm install -g eas-cli
-
-      - name: Initialiser le projet EAS (uniquement au premier run)
+      - name: Générer le projet Android natif
+        run: npx expo prebuild --platform android --no-install --clean
         env:
-          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
-        run: |
-          if ! grep -q '"projectId"' app.json 2>/dev/null; then
-            eas init --non-interactive --force
-          else
-            echo "Projet EAS déjà initialisé."
-          fi
+          CI: "1"
 
-      - name: Sauvegarder l'id de projet EAS s'il vient d'être créé
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          if ! git diff --quiet -- app.json; then
-            git add app.json
-            git commit -m "chore: ajouter l'id du projet EAS"
-            git push
-          else
-            echo "Rien à committer."
-          fi
-
-      - name: Lancer le build Android sur EAS et attendre le résultat
-        env:
-          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
-        run: eas build --platform android --profile preview --non-interactive --wait --json > eas-build-result.json
-
-      - name: Télécharger l'APK généré
-        run: |
-          URL=$(node -e "const r=JSON.parse(require('fs').readFileSync('eas-build-result.json','utf8')); const b=Array.isArray(r)?r[0]:r; console.log(b.artifacts.buildUrl)")
-          echo "Téléchargement depuis $URL"
-          curl -L "$URL" -o app-debug.apk
+      - name: Compiler l'APK (Gradle)
+        working-directory: android
+        run: ./gradlew assembleRelease --no-daemon -PreactNativeArchitectures=arm64-v8a,armeabi-v7a > ../gradle.log 2>&1
 
       - name: Publier l'APK comme artifact téléchargeable
         uses: actions/upload-artifact@v4
         with:
-          name: 6ieme-oeil-debug-apk
-          path: app-debug.apk
+          name: 6ieme-oeil-apk
+          path: android/app/build/outputs/apk/release/app-release.apk
 
-      - name: Afficher les logs d'erreur EAS
+      - name: Afficher l'erreur Gradle
         if: failure()
-        env:
-          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
         run: |
-          eas build:list --platform android --limit 1 --non-interactive --json > last-build.json || true
-          node -e "const fs=require('fs'),cp=require('child_process'),z=require('zlib');const r=JSON.parse(fs.readFileSync('last-build.json','utf8'));const b=Array.isArray(r)?r[0]:r;console.log('Statut:',b.status);if(b.error)console.log('Erreur EAS:',JSON.stringify(b.error));for(const u of b.logFiles||[]){let buf=cp.execFileSync('curl',['-sL',u],{maxBuffer:1e8});try{buf=z.gunzipSync(buf)}catch(e){}const rows=buf.toString().trim().split(String.fromCharCode(10)).map(l=>{try{return JSON.parse(l)}catch(e){return {msg:l}}});const g=rows.filter(x=>x.phase==='RUN_GRADLEW');(g.length?g:rows).slice(-70).forEach(x=>console.log(x.msg))}"
+          if [ -f gradle.log ]; then
+            grep -n -A 30 "What went wrong" gradle.log | head -80
+            echo "----- fin du log -----"
+            tail -40 gradle.log
+          fi
