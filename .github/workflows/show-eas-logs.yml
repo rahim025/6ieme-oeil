@@ -1,0 +1,27 @@
+name: Afficher les logs EAS
+
+# Lancement manuel : onglet Actions > Afficher les logs EAS > Run workflow
+on:
+  workflow_dispatch:
+
+jobs:
+  logs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Récupérer le code
+        uses: actions/checkout@v4
+
+      - name: Installer Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Installer eas-cli
+        run: npm install -g eas-cli
+
+      - name: Logs du dernier build Android
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          eas build:list --platform android --limit 1 --non-interactive --json > last-build.json
+          node -e "const fs=require('fs'),cp=require('child_process'),z=require('zlib');const r=JSON.parse(fs.readFileSync('last-build.json','utf8'));const b=Array.isArray(r)?r[0]:r;console.log('Statut:',b.status);if(b.error)console.log('Erreur EAS:',JSON.stringify(b.error));for(const u of b.logFiles||[]){let buf=cp.execFileSync('curl',['-sL','--compressed',u],{maxBuffer:1e8});console.log('octets:',buf.length,'debut:',buf.slice(0,6).toString('hex'));for(let i=0;i<3&&buf[0]!==123;i++){let ok=false;for(const f of [z.gunzipSync,z.brotliDecompressSync,z.inflateSync,z.zstdDecompressSync]){if(!f)continue;try{buf=f(buf);ok=true;break}catch(e){}}if(!ok)break}const rows=buf.toString().trim().split(String.fromCharCode(10)).map(l=>{try{return JSON.parse(l)}catch(e){return {msg:l}}});const g=rows.filter(x=>x.phase==='RUN_GRADLEW');(g.length?g:rows).slice(-70).forEach(x=>console.log(x.msg))}"
