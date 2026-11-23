@@ -4,6 +4,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import mobileAds from 'react-native-google-mobile-ads';
+import * as Updates from 'expo-updates';
 
 import { BrowserProvider } from './src/context/BrowserContext';
 import BrowserScreen from './src/screens/BrowserScreen';
@@ -19,6 +20,23 @@ export default function App() {
     mobileAds()
       .initialize()
       .catch(() => {});
+  }, []);
+
+  // Mises à jour automatiques : au démarrage, l'appli vérifie s'il existe une
+  // nouvelle version (envoyée depuis GitHub), la télécharge et redémarre dessus.
+  useEffect(() => {
+    if (__DEV__ || !Updates.isEnabled) return;
+    (async () => {
+      try {
+        const check = await Updates.checkForUpdateAsync();
+        if (check.isAvailable) {
+          await Updates.fetchUpdateAsync();
+          await Updates.reloadAsync();
+        }
+      } catch (e) {
+        // Pas de réseau ou pas de mise à jour : on continue normalement
+      }
+    })();
   }, []);
 
   return (
